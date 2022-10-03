@@ -1,82 +1,124 @@
-// Load dotenv config
-require("dotenv").config()
+// Load dotenv
+require('dotenv').config()
+const port = process.env.PORT || 8080
 
-// Const and imports
-const express = require("express")
-const app = express()
-const auth = require("./auth").Authentication
-const register = require('./register').Signup
-const handlebars = require("express-handlebars")
-const session = require("express-session")
-const MongoStore = require("connect-mongo");
+// Express
+const express = require('express')
+const server = express()
 
-// Server configuration
-const PORT = process.env.PORT || 8000
-app.use(session({
-    store: new MongoStore({
-        mongoUrl: `mongodb+srv://${process.env.DB_USERNAME}:${process.env.DB_PASSWORD}@${process.env.CLUSTER_URI}/${process.env.DATABASE_NAME}`,
-        ttl: 60 // 1 minute...
-    }),
-    secret: "top-secret",
-    resave: "true",
-    saveUninitialized: true
+// Mongo
+const {Types} = require('mongoose')
+const connect = require('./db/db')
+const User = require('./db/schema/userSchema')
+const MongoStore = require('connect-mongo')
+connect()
+
+// Session & Passport
+const session = require('express-session')
+const passport = require('passport')
+const LocalStrategy = require('passport-local')
+passport.use('signin', new LocalStrategy( (username, password, done) => {
+    User.findOne({username}, (err, user) => {
+        if (err) { return done(err) }
+        if (!user) { return done(null, false) }
+        if (!passwordCheck(password, user.password)) { return done(null, false) }
+        return done(null, user)
+    })
 }))
-app.use(express.static("public"))
-app.use(express.json())
-app.use(express.urlencoded({extended: true}))
-
-// Handlebars configuration
-const hbs = handlebars.create({
-    extname: "hbs",
-    defaultLayout: "main",
-    layoutsDir: __dirname + "/views/layouts/",
+passport.use('signup', new LocalStrategy({
+    passReqToCallback: true
+}, (req, username, password, done) => {
+    User.findOne({username}, (err, user) => {
+        if (err) { return done(err) }
+        if (user) { return done(null, false) }
+        const {fullname, address} = req.body
+        const passHash = passwordHash(password)
+        const newUser = new User({fullname, username, password: passHash, address})
+        newUser.save()
+        return done(null, newUser)
+    })
+}))
+passport.serializeUser((user, done) => {
+    done(null, user._id)
+})
+passport.deserializeUser(async (id, done) => {
+    id = Types.ObjectId(id)
+    const user = await User.findById(id)
+    done(null, user)
 })
 
-app.engine("hbs", hbs.engine)
-app.set("view engine", "hbs")
-app.set("views", "views")
+// Password hash & checks
+const {passwordHash, passwordCheck} = require('./helpers/passwordHash')
+const {getAuth} = require("./helpers/auth");
 
-// Signup, signin and signout
-app.post("/signin", auth)
+// Handlebars
+const handlebars = require('express-handlebars')
+const hbs = handlebars.create({
+    extname: 'hbs',
+    defaultLayout: 'main',
+    layoutsDir: __dirname + '/views/layouts/'
+})
 
-app.post("/signup", register)
+// Server config and middlewares
+server.engine('hbs', hbs.engine)
+server.set('view engine', 'hbs')
+server.set('views', 'views')
+server.use(express.json())
+server.use(express.urlencoded({extended: true}))
+server.use(express.static('public'))
+server.use(session({
+    secret: 'top-secret',
+    resave: false,
+    saveUninitialized: true,
+    store: new MongoStore({
+        mongoUrl: `mongodb+srv://${process.env.DB_USERNAME}:${process.env.DB_PASSWORD}@${process.env.CLUSTER_URI}/${process.env.DATABASE_NAME}`,
+        retries: 0,
+        ttl: 60 * 60 * 24
+    })
+}))
+server.use(passport.initialize())
+server.use(passport.session())
 
-app.post("/signout", (req, res) => {
-    const username = req.session.user
-    req.session.destroy( err => {
-        if (!err) res.render("logout", {username: username})
-        else res.send({status: "Logout error", body: err})
+// Routes
+server.get('/', getAuth, (req, res) => {
+    res.render('index', {username: req.user.fullname})
+})
+
+server.get('/login', (req, res) => {
+    res.sendFile(__dirname + '/public/signin.html')
+})
+
+server.get('/register', (req, res) => {
+    res.sendFile(__dirname + '/public/signup.html')
+})
+
+server.post('/signin', passport.authenticate('signin', {
+    failureRedirect: '/login?error=signin'
+}), (req, res) => {
+    req.session.user = req.user
+    res.redirect('/')
+})
+
+server.post('/signup', passport.authenticate('signup', {
+    failureRedirect: '/login?error=exist'
+}), (req, res) => {
+    req.session.user = req.user
+    res.redirect('/')
+})
+
+server.post('/signout', (req, res) => {
+    req.session.destroy()
+    req.logout(() => {
+        res.redirect('/login')
     })
 })
 
-// Endpoints
-app.get("/", (req, res) => {
-    req.session.user ? res.render("index", {username: req.session.user, admin: req.session.admin}) : res.redirect("/login")
-})
-
-app.get("/login", (req, res) => {
-    res.sendFile(__dirname + "/public/signin.html")
-})
-
-app.get("/register", (req, res) => {
-    res.sendFile(__dirname + "/public/signup.html")
-})
-
-// 404 Error
-app.use((req, res) => {
-    const response = {
-        error: -2,
-        description: `${req.url} ${req.method} not implemented`
-    }
-    res.status(404).json(response)
-})
-
 // Server start
-const server = app.listen(PORT, () => {
-    console.log(`Server running on Port No. ${PORT}`)
+server.listen(port, () => {
+    console.log(`Server running on port ${port}`)
 })
 
-// Server error handling
-server.on("error", (err) => {
-    console.error(`Error: ${err}`)
+// Server error
+server.on('error', (err) => {
+    console.error(`Server error: ${err.message}`)
 })

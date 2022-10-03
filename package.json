@@ -1,36 +1,22 @@
 {
-  "name": "sessionLocal",
+  "name": "sessionlocal",
   "version": "1.0.0",
   "description": "",
-  "main": "server.js",
+  "main": "index.js",
   "scripts": {
-    "test": "nodemon server.js"
+    "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/G43R1EL/logInFormulario.git"
-  },
-  "keywords": [
-    "session",
-    "storage",
-    "cookies",
-    "login"
-  ],
-  "author": "Nelson Gabriel Hernández",
-  "license": "GPL-3.0-or-later",
-  "bugs": {
-    "url": "https://github.com/G43R1EL/logInFormulario/issues"
-  },
-  "homepage": "https://github.com/G43R1EL/logInFormulario#readme",
+  "author": "Nelson Gabriel Hernandez",
+  "license": "ISC",
   "dependencies": {
     "bcrypt": "^5.0.1",
     "connect-mongo": "^4.6.0",
-    "dotenv": "^16.0.2",
+    "dotenv": "^16.0.3",
     "express": "^4.18.1",
     "express-handlebars": "^6.0.6",
     "express-session": "^1.17.3",
-    "mongoose": "^6.6.1",
-    "nodemon": "^2.0.20",
-    "passport": "^0.6.0"
+    "mongoose": "^6.6.3",
+    "passport": "^0.6.0",
+    "passport-local": "^1.0.0"
   }
 }
