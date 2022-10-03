@@ -73,7 +73,7 @@ server.use(session({
     store: new MongoStore({
         mongoUrl: `mongodb+srv://${process.env.DB_USERNAME}:${process.env.DB_PASSWORD}@${process.env.CLUSTER_URI}/${process.env.DATABASE_NAME}`,
         retries: 0,
-        ttl: 60 * 60 * 24
+        ttl: 60 * 10 // 10 minutes session
     })
 }))
 server.use(passport.initialize())
@@ -81,11 +81,15 @@ server.use(passport.session())
 
 // Routes
 server.get('/', getAuth, (req, res) => {
-    res.render('index', {username: req.user.fullname})
+    res.render('index', {username: req.user.username})
 })
 
 server.get('/login', (req, res) => {
     res.sendFile(__dirname + '/public/signin.html')
+})
+
+server.get('/logout', (req, res) => {
+    res.render('logout')
 })
 
 server.get('/register', (req, res) => {
@@ -93,23 +97,24 @@ server.get('/register', (req, res) => {
 })
 
 server.post('/signin', passport.authenticate('signin', {
-    failureRedirect: '/login?error=signin'
+    failureRedirect: '/login?error=signin' // SignIn error view implemented on login screen
 }), (req, res) => {
     req.session.user = req.user
     res.redirect('/')
 })
 
 server.post('/signup', passport.authenticate('signup', {
-    failureRedirect: '/login?error=exist'
+    failureRedirect: '/login?error=exist' // SignUp error view implemented on login screen
 }), (req, res) => {
     req.session.user = req.user
     res.redirect('/')
 })
 
 server.post('/signout', (req, res) => {
+    const username = req.user.fullname
     req.session.destroy()
     req.logout(() => {
-        res.redirect('/login')
+        res.redirect(`/logout?username=${username}`)
     })
 })
 
