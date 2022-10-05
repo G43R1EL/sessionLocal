@@ -1,6 +1,11 @@
 // Load dotenv
 require('dotenv').config()
-const port = process.env.PORT || 8080
+
+// Yargs
+const yargs = require('yargs')
+const { hideBin } = require('yargs/helpers')
+const argv = yargs(hideBin(process.argv)).argv
+const port = argv.port || 8080
 
 // Express
 const express = require('express')
@@ -79,6 +84,10 @@ server.use(session({
 server.use(passport.initialize())
 server.use(passport.session())
 
+// Router
+const ramdomRouter =  require('./routes/randomRouter').randomRouter
+server.use('/api/random', ramdomRouter)
+
 // Routes
 server.get('/', getAuth, (req, res) => {
     res.render('index', {username: req.user.username})
@@ -94,6 +103,18 @@ server.get('/logout', (req, res) => {
 
 server.get('/register', (req, res) => {
     res.sendFile(__dirname + '/public/signup.html')
+})
+
+server.get('/info', getAuth, (req, res) => {
+    res.render('info', {
+        argvs: process.argv.slice(2),
+        platform: process.platform,
+        node: process.version,
+        memory: process.memoryUsage().rss,
+        path: process.execPath,
+        pid: process.pid,
+        folder: process.cwd()
+    })
 })
 
 server.post('/signin', passport.authenticate('signin', {
