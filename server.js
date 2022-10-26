@@ -5,7 +5,7 @@ require('dotenv').config()
 const yargs = require('yargs')
 const { hideBin } = require('yargs/helpers')
 const argv = yargs(hideBin(process.argv)).argv
-const port = argv.port || 8080
+const port = argv.port || 8000
 
 // Express
 const express = require('express')
