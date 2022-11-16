@@ -1,7 +1,7 @@
 const express = require('express')
 const router = express.Router()
 const {fork} = require('child_process')
-const child = fork('./routes/randomGenerator.js')
+const child = fork('./helpers/randomGenerator.js')
 
 router.get('/', async (req, res) => {
     const rounds = req.query.cant || 100000000
