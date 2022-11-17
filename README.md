@@ -1,4 +1,4 @@
-# Deesafío - Servidores Node.js / Cluster / Nginx:
+# Desafío - Servidores Node.js / Cluster / Nginx:
 
 - Agregar en la vista info, el número de procesadores presentes en el servidor
   
