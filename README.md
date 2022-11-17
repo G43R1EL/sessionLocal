@@ -37,9 +37,13 @@
 Configurar nginx para balancear cargas en nustro servidor de la siguiente manera:
 
 - Redirigir todas las consultas a /api/randoms a un cluster de servidores escuchando en el puerto 8081. El cluster será creado en node utilizando el módulo nativo cluster
+    >> Inicio el servidor random en modo cluster con 'pm2 start random.js --name=ramdomCluster --watch -- --port=8081 --mode=cluster'
 
 - El resto de consultas, redirigirlas a un servidor individual escuchando en el puerto 8080
+    >> Inicio el servidor general en modo fork con 'pm2 start index.js --name=serverFork --watch -- --port=8080'
 
 - Verificar que todo funcione correctamente
+    >> Inicio nginx utilizando la configuración 'nginx/nginx_nodecluster.conf', funciona el servidor general informando que es un servidor express, el PID y la hora local. El servidor random responde informando el ID del worker además de los números random para confirmar que estamos ante un cluster.
 
 - Luego, modificar la configuración para que todas las consultas a /api/randoms sean dirigidas a un cluster de servidores gestionado desde nginx, repartiendolas equitativamente entre 4 instancias escuchando en los puertos 8082, 8083, 8084 y 8085 respectivamente
+    >> Para esta prueba el servidor general se mantiene igual que antes y se inicia de la misma forma, pero el servidor random se incian cuatro instancias 'pm2 start random.js --name=ramdomCluster --watch -- --port=8082' cambiando el número de puerto para que sean 8082, 8083, 8084 y 8085. Sin especificar el modo cluster para que por defecto inicie cada uno en modo fork. Para esta prueba nginx utilizará la configuración del archivo 'nginx/nginx.conf' el cual se comento el servidor random en el puerto 8081 y se sumaron los otros servidores sin definir peso para que nginx haga el balance de carga equitativo.
